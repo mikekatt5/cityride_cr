@@ -17,11 +17,12 @@ class CityRideApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF3F4F6),
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00C853)),
       ),
-      home: const HomeScreen(),
+      home: const LoginScreen(),
     );
   }
 }
 
+enum UserRole { cliente, conductor, admin }
 enum ServiceType { moto, pickup, camion }
 
 class ServiceInfo {
@@ -30,8 +31,8 @@ class ServiceInfo {
   final String description;
   final int baseFare;
   final int kmPrice;
-  final int minPrice;
-  final int minimum;
+  final int minutePrice;
+  final int minimumFare;
 
   const ServiceInfo({
     required this.name,
@@ -39,8 +40,8 @@ class ServiceInfo {
     required this.description,
     required this.baseFare,
     required this.kmPrice,
-    required this.minPrice,
-    required this.minimum,
+    required this.minutePrice,
+    required this.minimumFare,
   });
 }
 
@@ -48,29 +49,29 @@ const services = {
   ServiceType.moto: ServiceInfo(
     name: 'Moto',
     emoji: '🏍️',
-    description: 'Viajes rápidos, mandados y entregas pequeñas',
+    description: 'Viajes rápidos y mandados',
     baseFare: 800,
     kmPrice: 350,
-    minPrice: 80,
-    minimum: 1500,
+    minutePrice: 80,
+    minimumFare: 1500,
   ),
   ServiceType.pickup: ServiceInfo(
     name: 'Pickup',
     emoji: '🛻',
-    description: 'Carga mediana, muebles y mudanzas pequeñas',
+    description: 'Carga mediana y mudanzas',
     baseFare: 2500,
     kmPrice: 850,
-    minPrice: 180,
-    minimum: 6000,
+    minutePrice: 180,
+    minimumFare: 6000,
   ),
   ServiceType.camion: ServiceInfo(
     name: 'Camión pequeño',
     emoji: '🚚',
-    description: 'Carga grande local y transporte comercial',
+    description: 'Carga comercial local',
     baseFare: 5000,
     kmPrice: 1300,
-    minPrice: 300,
-    minimum: 12000,
+    minutePrice: 300,
+    minimumFare: 12000,
   ),
 };
 
@@ -83,7 +84,7 @@ class Trip {
   final int price;
   final String status;
 
-  Trip({
+  const Trip({
     required this.service,
     required this.pickup,
     required this.destination,
@@ -92,10 +93,175 @@ class Trip {
     required this.price,
     required this.status,
   });
+
+  Trip copyWith({String? status}) {
+    return Trip(
+      service: service,
+      pickup: pickup,
+      destination: destination,
+      km: km,
+      minutes: minutes,
+      price: price,
+      status: status ?? this.status,
+    );
+  }
+}
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  UserRole selectedRole = UserRole.cliente;
+  bool isRegister = false;
+
+  final nameController = TextEditingController(text: 'Michael');
+  final emailController = TextEditingController(text: 'demo@cityridecr.com');
+  final passwordController = TextEditingController(text: '123456');
+
+  String roleName(UserRole role) {
+    if (role == UserRole.cliente) return 'Cliente';
+    if (role == UserRole.conductor) return 'Conductor';
+    return 'Admin';
+  }
+
+  IconData roleIcon(UserRole role) {
+    if (role == UserRole.cliente) return Icons.person;
+    if (role == UserRole.conductor) return Icons.two_wheeler;
+    return Icons.admin_panel_settings;
+  }
+
+  void enterApp() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HomeScreen(
+          userName: nameController.text.trim().isEmpty ? 'Usuario' : nameController.text.trim(),
+          userRole: selectedRole,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0B0B0F),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('CityRide CR',
+                  style: TextStyle(color: Colors.white, fontSize: 42, fontWeight: FontWeight.w900)),
+              const Text('Moto, pickup y camión pequeño en Costa Rica',
+                  style: TextStyle(color: Colors.white70, fontSize: 16)),
+              const SizedBox(height: 28),
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(isRegister ? 'Crear cuenta' : 'Iniciar sesión',
+                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+                    const Text('Selecciona cómo quieres entrar', style: TextStyle(color: Colors.black54)),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        roleButton(UserRole.cliente),
+                        const SizedBox(width: 8),
+                        roleButton(UserRole.conductor),
+                        const SizedBox(width: 8),
+                        roleButton(UserRole.admin),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    if (isRegister) input('Nombre', nameController, Icons.badge, false),
+                    input('Correo', emailController, Icons.email, false),
+                    input('Contraseña', passwordController, Icons.lock, true),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 58,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        ),
+                        onPressed: enterApp,
+                        child: Text(isRegister
+                            ? 'Registrarme como ${roleName(selectedRole)}'
+                            : 'Entrar como ${roleName(selectedRole)}'),
+                      ),
+                    ),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => setState(() => isRegister = !isRegister),
+                        child: Text(isRegister ? 'Ya tengo cuenta' : 'Crear cuenta nueva'),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget roleButton(UserRole role) {
+    final selected = selectedRole == role;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => selectedRole = role),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF00C853) : const Color(0xFFF3F4F6),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              Icon(roleIcon(role), color: selected ? Colors.white : Colors.black),
+              Text(roleName(role),
+                  style: TextStyle(color: selected ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget input(String label, TextEditingController controller, IconData icon, bool obscure) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        obscureText: obscure,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+          filled: true,
+          fillColor: const Color(0xFFF3F4F6),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
+        ),
+      ),
+    );
+  }
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final String userName;
+  final UserRole userRole;
+
+  const HomeScreen({super.key, required this.userName, required this.userRole});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -104,6 +270,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int tab = 0;
   Trip? activeTrip;
+  final List<Trip> completedTrips = [];
+
+  @override
+  void initState() {
+    super.initState();
+    tab = widget.userRole == UserRole.cliente ? 0 : widget.userRole == UserRole.conductor ? 1 : 2;
+  }
 
   void createTrip(Trip trip) {
     setState(() {
@@ -114,33 +287,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void acceptTrip() {
     if (activeTrip == null) return;
-
-    setState(() {
-      activeTrip = Trip(
-        service: activeTrip!.service,
-        pickup: activeTrip!.pickup,
-        destination: activeTrip!.destination,
-        km: activeTrip!.km,
-        minutes: activeTrip!.minutes,
-        price: activeTrip!.price,
-        status: 'Aceptado por conductor',
-      );
-    });
+    setState(() => activeTrip = activeTrip!.copyWith(status: 'Aceptado por conductor'));
   }
 
   void finishTrip() {
+    if (activeTrip != null) completedTrips.add(activeTrip!.copyWith(status: 'Completado'));
     setState(() {
       activeTrip = null;
       tab = 0;
     });
   }
 
+  void logout() {
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
-      ClientPage(onCreateTrip: createTrip, activeTrip: activeTrip),
-      DriverPage(trip: activeTrip, onAccept: acceptTrip, onFinish: finishTrip),
-      AdminPage(trip: activeTrip),
+      ClientPage(userName: widget.userName, onCreateTrip: createTrip, activeTrip: activeTrip, onLogout: logout),
+      DriverPage(
+        userName: widget.userName,
+        trip: activeTrip,
+        history: completedTrips,
+        onAccept: acceptTrip,
+        onFinish: finishTrip,
+        onLogout: logout,
+      ),
+      AdminPage(userName: widget.userName, trip: activeTrip, history: completedTrips, onLogout: logout),
     ];
 
     return Scaffold(
@@ -159,13 +333,17 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class ClientPage extends StatefulWidget {
+  final String userName;
   final Function(Trip) onCreateTrip;
   final Trip? activeTrip;
+  final VoidCallback onLogout;
 
   const ClientPage({
     super.key,
+    required this.userName,
     required this.onCreateTrip,
     required this.activeTrip,
+    required this.onLogout,
   });
 
   @override
@@ -184,8 +362,8 @@ class _ClientPageState extends State<ClientPage> {
     final s = services[selected]!;
     final distance = int.tryParse(km.text) ?? 0;
     final time = int.tryParse(minutes.text) ?? 0;
-    final total = s.baseFare + (distance * s.kmPrice) + (time * s.minPrice);
-    return total < s.minimum ? s.minimum : total;
+    final total = s.baseFare + (distance * s.kmPrice) + (time * s.minutePrice);
+    return total < s.minimumFare ? s.minimumFare : total;
   }
 
   @override
@@ -198,16 +376,13 @@ class _ClientPageState extends State<ClientPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            header(),
+            topBar('CityRide CR', 'Hola, ${widget.userName}', widget.onLogout),
             const SizedBox(height: 18),
             mapBox(),
             const SizedBox(height: 18),
             if (widget.activeTrip != null) TripCard(trip: widget.activeTrip!),
             const SizedBox(height: 18),
-            const Text(
-              'Elige el tipo de servicio',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
-            ),
+            const Text('Elige el tipo de servicio', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
             const SizedBox(height: 12),
             for (final entry in services.entries) serviceButton(entry),
             const SizedBox(height: 10),
@@ -229,68 +404,19 @@ class _ClientPageState extends State<ClientPage> {
     );
   }
 
-  Widget header() {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(26),
-      ),
-      child: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'CityRide CR',
-            style: TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w900),
-          ),
-          SizedBox(height: 6),
-          Text(
-            'Moto, pickup y camión pequeño en colones ₡',
-            style: TextStyle(color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget mapBox() {
     return Container(
       height: 220,
-      decoration: BoxDecoration(
-        color: const Color(0xFF111827),
-        borderRadius: BorderRadius.circular(26),
-      ),
-      child: Stack(
-        children: [
-          const Center(
-            child: Text(
-              '🗺️ Mapa GPS próximamente',
-              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ),
-          Positioned(
-            left: 18,
-            bottom: 18,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF00C853),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: const Text(
-                'Ciudad activa: Costa Rica',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-        ],
+      decoration: BoxDecoration(color: const Color(0xFF111827), borderRadius: BorderRadius.circular(26)),
+      child: const Center(
+        child: Text('🗺️ Mapa GPS próximamente',
+            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
       ),
     );
   }
 
   Widget serviceButton(MapEntry<ServiceType, ServiceInfo> entry) {
     final isSelected = selected == entry.key;
-
     return GestureDetector(
       onTap: () => setState(() => selected = entry.key),
       child: Container(
@@ -306,23 +432,15 @@ class _ClientPageState extends State<ClientPage> {
             Text(entry.value.emoji, style: const TextStyle(fontSize: 38)),
             const SizedBox(width: 14),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.value.name,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(entry.value.name,
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: isSelected ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  Text(
-                    entry.value.description,
-                    style: TextStyle(color: isSelected ? Colors.white70 : Colors.black54),
-                  ),
-                ],
-              ),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: isSelected ? Colors.white : Colors.black)),
+                Text(entry.value.description,
+                    style: TextStyle(color: isSelected ? Colors.white70 : Colors.black54)),
+              ]),
             ),
           ],
         ),
@@ -342,10 +460,7 @@ class _ClientPageState extends State<ClientPage> {
           prefixIcon: Icon(icon),
           filled: true,
           fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: BorderSide.none,
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
         ),
       ),
     );
@@ -353,38 +468,20 @@ class _ClientPageState extends State<ClientPage> {
 
   Widget priceBox(int price) {
     final s = services[selected]!;
-
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
       child: Column(
         children: [
           Row(
             children: [
-              const Expanded(
-                child: Text(
-                  'Precio estimado',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-              Text(
-                '₡$price',
-                style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF00C853),
-                ),
-              ),
+              const Expanded(child: Text('Precio estimado', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+              Text('₡$price',
+                  style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF00C853))),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Base ₡${s.baseFare} · Km ₡${s.kmPrice} · Min ₡${s.minPrice} · Mínimo ₡${s.minimum}',
-            style: const TextStyle(color: Colors.black54),
-          ),
+          Text('Base ₡${s.baseFare} · Km ₡${s.kmPrice} · Min ₡${s.minutePrice} · Mínimo ₡${s.minimumFare}',
+              style: const TextStyle(color: Colors.black54)),
         ],
       ),
     );
@@ -413,51 +510,55 @@ class _ClientPageState extends State<ClientPage> {
             ),
           );
         },
-        child: const Text(
-          'Solicitar servicio',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        child: const Text('Solicitar servicio', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
       ),
     );
   }
 }
 
 class DriverPage extends StatelessWidget {
+  final String userName;
   final Trip? trip;
+  final List<Trip> history;
   final VoidCallback onAccept;
   final VoidCallback onFinish;
+  final VoidCallback onLogout;
 
   const DriverPage({
     super.key,
+    required this.userName,
     required this.trip,
+    required this.history,
     required this.onAccept,
     required this.onFinish,
+    required this.onLogout,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (trip == null) {
-      return const Center(
-        child: Text(
-          'No hay solicitudes activas',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-      );
-    }
+    final totalGanado = history.fold<int>(0, (sum, t) => sum + (t.price * 0.85).round());
 
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(18),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Panel Conductor', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
+            topBar('Panel Conductor', userName, onLogout),
+            const SizedBox(height: 14),
+            metricBox('Ganancia acumulada', '₡$totalGanado'),
+            metricBox('Viajes completados', '${history.length}'),
             const SizedBox(height: 20),
-            TripCard(trip: trip!),
-            const Spacer(),
-            button('Aceptar viaje', const Color(0xFF00C853), onAccept),
-            const SizedBox(height: 12),
-            button('Finalizar viaje', Colors.black, onFinish),
+            if (trip == null)
+              const Center(child: Padding(padding: EdgeInsets.all(30), child: Text('No hay solicitudes activas')))
+            else ...[
+              TripCard(trip: trip!),
+              const SizedBox(height: 14),
+              button('Aceptar viaje', const Color(0xFF00C853), onAccept),
+              const SizedBox(height: 12),
+              button('Finalizar viaje', Colors.black, onFinish),
+            ],
+            const SizedBox(height: 20),
+            historyList(history),
           ],
         ),
       ),
@@ -469,63 +570,96 @@ class DriverPage extends StatelessWidget {
       width: double.infinity,
       height: 58,
       child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        ),
+        style: ElevatedButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white),
         onPressed: onTap,
-        child: Text(text, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        child: Text(text),
       ),
     );
   }
 }
 
 class AdminPage extends StatelessWidget {
+  final String userName;
   final Trip? trip;
+  final List<Trip> history;
+  final VoidCallback onLogout;
 
-  const AdminPage({super.key, required this.trip});
+  const AdminPage({super.key, required this.userName, required this.trip, required this.history, required this.onLogout});
 
   @override
   Widget build(BuildContext context) {
-    final commission = trip == null ? 0 : (trip!.price * 0.15).round();
-    final driverPay = trip == null ? 0 : trip!.price - commission;
+    final totalVentas = history.fold<int>(0, (sum, t) => sum + t.price);
+    final totalComision = history.fold<int>(0, (sum, t) => sum + (t.price * 0.15).round());
+    final driverPay = trip == null ? 0 : trip!.price - (trip!.price * 0.15).round();
 
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(18),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Panel Admin', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 20),
-            adminBox('Viajes activos', trip == null ? '0' : '1'),
-            adminBox('Comisión app 15%', '₡$commission'),
-            adminBox('Gana conductor', '₡$driverPay'),
+            topBar('Panel Admin', userName, onLogout),
+            const SizedBox(height: 14),
+            metricBox('Viajes activos', trip == null ? '0' : '1'),
+            metricBox('Viajes completados', '${history.length}'),
+            metricBox('Ventas totales', '₡$totalVentas'),
+            metricBox('Comisión app 15%', '₡$totalComision'),
+            if (trip != null) metricBox('Ganancia conductor viaje activo', '₡$driverPay'),
             const SizedBox(height: 20),
             if (trip != null) TripCard(trip: trip!),
+            const SizedBox(height: 20),
+            historyList(history),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget adminBox(String title, String value) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(22)),
-      child: Row(
-        children: [
-          Expanded(child: Text(title, style: const TextStyle(color: Colors.white70))),
-          Text(
-            value,
-            style: const TextStyle(color: Color(0xFF00C853), fontSize: 24, fontWeight: FontWeight.w900),
-          ),
-        ],
-      ),
-    );
+Widget topBar(String title, String subtitle, VoidCallback onLogout) {
+  return Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(24)),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+            Text(subtitle, style: const TextStyle(color: Colors.white70)),
+          ]),
+        ),
+        IconButton(onPressed: onLogout, icon: const Icon(Icons.logout, color: Colors.white)),
+      ],
+    ),
+  );
+}
+
+Widget metricBox(String title, String value) {
+  return Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+    child: Row(
+      children: [
+        Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold))),
+        Text(value, style: const TextStyle(color: Color(0xFF00C853), fontSize: 22, fontWeight: FontWeight.w900)),
+      ],
+    ),
+  );
+}
+
+Widget historyList(List<Trip> history) {
+  if (history.isEmpty) {
+    return const Text('Sin historial todavía', style: TextStyle(color: Colors.black54));
   }
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text('Historial de viajes', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 10),
+      for (final trip in history.reversed) TripCard(trip: trip),
+    ],
+  );
 }
 
 class TripCard extends StatelessWidget {
@@ -536,31 +670,28 @@ class TripCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final service = services[trip.service]!;
+    final commission = (trip.price * 0.15).round();
+    final driverPay = trip.price - commission;
 
     return Container(
       width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('${service.emoji} ${service.name}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
           Text('Estado: ${trip.status}', style: const TextStyle(color: Color(0xFF00C853), fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text('Salida: ${trip.pickup}'),
           Text('Destino: ${trip.destination}'),
           Text('Distancia: ${trip.km} km'),
           Text('Tiempo: ${trip.minutes} minutos'),
-          const SizedBox(height: 12),
-          Text(
-            'Total: ₡${trip.price}',
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Color(0xFF00C853)),
-          ),
+          const SizedBox(height: 10),
+          Text('Total: ₡${trip.price}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+          Text('Comisión app: ₡$commission'),
+          Text('Conductor gana: ₡$driverPay'),
         ],
       ),
     );
