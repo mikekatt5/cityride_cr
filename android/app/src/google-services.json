@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "384816860234",
+    "project_id": "cityride-cr",
+    "storage_bucket": "cityride-cr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:384816860234:android:2b77c7d15f164d0a0caab3",
+        "android_client_info": {
+          "package_name": "com.cityride.cr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDUX9hVQ1B_f1tJRCPJZU4ifMs1ofl083A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
