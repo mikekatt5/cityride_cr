@@ -25,6 +25,29 @@ class CityRideApp extends StatelessWidget {
 enum UserRole { cliente, conductor, admin }
 enum ServiceType { moto, pickup, camion }
 
+class DriverProfile {
+  final String name;
+  final String vehicle;
+  final String plate;
+  final bool online;
+
+  const DriverProfile({
+    required this.name,
+    required this.vehicle,
+    required this.plate,
+    required this.online,
+  });
+
+  DriverProfile copyWith({bool? online}) {
+    return DriverProfile(
+      name: name,
+      vehicle: vehicle,
+      plate: plate,
+      online: online ?? this.online,
+    );
+  }
+}
+
 class ServiceInfo {
   final String name;
   final String emoji;
@@ -83,6 +106,7 @@ class Trip {
   final int minutes;
   final int price;
   final String status;
+  final DriverProfile? driver;
 
   const Trip({
     required this.service,
@@ -92,9 +116,10 @@ class Trip {
     required this.minutes,
     required this.price,
     required this.status,
+    this.driver,
   });
 
-  Trip copyWith({String? status}) {
+  Trip copyWith({String? status, DriverProfile? driver}) {
     return Trip(
       service: service,
       pickup: pickup,
@@ -103,6 +128,7 @@ class Trip {
       minutes: minutes,
       price: price,
       status: status ?? this.status,
+      driver: driver ?? this.driver,
     );
   }
 }
@@ -156,10 +182,14 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('CityRide CR',
-                  style: TextStyle(color: Colors.white, fontSize: 42, fontWeight: FontWeight.w900)),
-              const Text('Moto, pickup y camión pequeño en Costa Rica',
-                  style: TextStyle(color: Colors.white70, fontSize: 16)),
+              const Text(
+                'CityRide CR',
+                style: TextStyle(color: Colors.white, fontSize: 42, fontWeight: FontWeight.w900),
+              ),
+              const Text(
+                'Moto, pickup y camión pequeño en Costa Rica',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
               const SizedBox(height: 28),
               Container(
                 padding: const EdgeInsets.all(22),
@@ -167,8 +197,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(isRegister ? 'Crear cuenta' : 'Iniciar sesión',
-                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+                    Text(
+                      isRegister ? 'Crear cuenta' : 'Iniciar sesión',
+                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+                    ),
                     const Text('Selecciona cómo quieres entrar', style: TextStyle(color: Colors.black54)),
                     const SizedBox(height: 18),
                     Row(
@@ -195,9 +227,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                         ),
                         onPressed: enterApp,
-                        child: Text(isRegister
-                            ? 'Registrarme como ${roleName(selectedRole)}'
-                            : 'Entrar como ${roleName(selectedRole)}'),
+                        child: Text(
+                          isRegister
+                              ? 'Registrarme como ${roleName(selectedRole)}'
+                              : 'Entrar como ${roleName(selectedRole)}',
+                        ),
                       ),
                     ),
                     Center(
@@ -230,8 +264,10 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             children: [
               Icon(roleIcon(role), color: selected ? Colors.white : Colors.black),
-              Text(roleName(role),
-                  style: TextStyle(color: selected ? Colors.white : Colors.black, fontWeight: FontWeight.bold)),
+              Text(
+                roleName(role),
+                style: TextStyle(color: selected ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+              ),
             ],
           ),
         ),
@@ -272,6 +308,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Trip? activeTrip;
   final List<Trip> completedTrips = [];
 
+  DriverProfile driver = const DriverProfile(
+    name: 'Conductor CityRide',
+    vehicle: 'Moto / Pickup / Camión',
+    plate: 'CR-2026',
+    online: true,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -285,13 +328,28 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void toggleDriverOnline() {
+    setState(() {
+      driver = driver.copyWith(online: !driver.online);
+    });
+  }
+
   void acceptTrip() {
-    if (activeTrip == null) return;
-    setState(() => activeTrip = activeTrip!.copyWith(status: 'Aceptado por conductor'));
+    if (activeTrip == null || !driver.online) return;
+
+    setState(() {
+      activeTrip = activeTrip!.copyWith(
+        status: 'Aceptado por conductor',
+        driver: driver,
+      );
+    });
   }
 
   void finishTrip() {
-    if (activeTrip != null) completedTrips.add(activeTrip!.copyWith(status: 'Completado'));
+    if (activeTrip != null) {
+      completedTrips.add(activeTrip!.copyWith(status: 'Completado'));
+    }
+
     setState(() {
       activeTrip = null;
       tab = 0;
@@ -305,16 +363,30 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      ClientPage(userName: widget.userName, onCreateTrip: createTrip, activeTrip: activeTrip, onLogout: logout),
+      ClientPage(
+        userName: widget.userName,
+        onCreateTrip: createTrip,
+        activeTrip: activeTrip,
+        driver: driver,
+        onLogout: logout,
+      ),
       DriverPage(
         userName: widget.userName,
         trip: activeTrip,
         history: completedTrips,
+        driver: driver,
+        onToggleOnline: toggleDriverOnline,
         onAccept: acceptTrip,
         onFinish: finishTrip,
         onLogout: logout,
       ),
-      AdminPage(userName: widget.userName, trip: activeTrip, history: completedTrips, onLogout: logout),
+      AdminPage(
+        userName: widget.userName,
+        trip: activeTrip,
+        history: completedTrips,
+        driver: driver,
+        onLogout: logout,
+      ),
     ];
 
     return Scaffold(
@@ -336,6 +408,7 @@ class ClientPage extends StatefulWidget {
   final String userName;
   final Function(Trip) onCreateTrip;
   final Trip? activeTrip;
+  final DriverProfile driver;
   final VoidCallback onLogout;
 
   const ClientPage({
@@ -343,6 +416,7 @@ class ClientPage extends StatefulWidget {
     required this.userName,
     required this.onCreateTrip,
     required this.activeTrip,
+    required this.driver,
     required this.onLogout,
   });
 
@@ -380,6 +454,8 @@ class _ClientPageState extends State<ClientPage> {
             const SizedBox(height: 18),
             mapBox(),
             const SizedBox(height: 18),
+            driverStatusCard(widget.driver),
+            const SizedBox(height: 18),
             if (widget.activeTrip != null) TripCard(trip: widget.activeTrip!),
             const SizedBox(height: 18),
             const Text('Elige el tipo de servicio', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
@@ -409,8 +485,10 @@ class _ClientPageState extends State<ClientPage> {
       height: 220,
       decoration: BoxDecoration(color: const Color(0xFF111827), borderRadius: BorderRadius.circular(26)),
       child: const Center(
-        child: Text('🗺️ Mapa GPS próximamente',
-            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+        child: Text(
+          '🗺️ Mapa GPS próximamente',
+          style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
@@ -433,13 +511,18 @@ class _ClientPageState extends State<ClientPage> {
             const SizedBox(width: 14),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(entry.value.name,
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: isSelected ? Colors.white : Colors.black)),
-                Text(entry.value.description,
-                    style: TextStyle(color: isSelected ? Colors.white70 : Colors.black54)),
+                Text(
+                  entry.value.name,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: isSelected ? Colors.white : Colors.black,
+                  ),
+                ),
+                Text(
+                  entry.value.description,
+                  style: TextStyle(color: isSelected ? Colors.white70 : Colors.black54),
+                ),
               ]),
             ),
           ],
@@ -475,13 +558,19 @@ class _ClientPageState extends State<ClientPage> {
         children: [
           Row(
             children: [
-              const Expanded(child: Text('Precio estimado', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-              Text('₡$price',
-                  style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF00C853))),
+              const Expanded(
+                child: Text('Precio estimado', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              Text(
+                '₡$price',
+                style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Color(0xFF00C853)),
+              ),
             ],
           ),
-          Text('Base ₡${s.baseFare} · Km ₡${s.kmPrice} · Min ₡${s.minutePrice} · Mínimo ₡${s.minimumFare}',
-              style: const TextStyle(color: Colors.black54)),
+          Text(
+            'Base ₡${s.baseFare} · Km ₡${s.kmPrice} · Min ₡${s.minutePrice} · Mínimo ₡${s.minimumFare}',
+            style: const TextStyle(color: Colors.black54),
+          ),
         ],
       ),
     );
@@ -493,24 +582,29 @@ class _ClientPageState extends State<ClientPage> {
       height: 58,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.black,
+          backgroundColor: widget.driver.online ? Colors.black : Colors.grey,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
-        onPressed: () {
-          widget.onCreateTrip(
-            Trip(
-              service: selected,
-              pickup: pickup.text,
-              destination: destination.text,
-              km: int.tryParse(km.text) ?? 0,
-              minutes: int.tryParse(minutes.text) ?? 0,
-              price: price,
-              status: 'Buscando conductor',
-            ),
-          );
-        },
-        child: const Text('Solicitar servicio', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        onPressed: widget.driver.online
+            ? () {
+                widget.onCreateTrip(
+                  Trip(
+                    service: selected,
+                    pickup: pickup.text,
+                    destination: destination.text,
+                    km: int.tryParse(km.text) ?? 0,
+                    minutes: int.tryParse(minutes.text) ?? 0,
+                    price: price,
+                    status: 'Buscando conductor',
+                  ),
+                );
+              }
+            : null,
+        child: Text(
+          widget.driver.online ? 'Solicitar servicio' : 'No hay conductores disponibles',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
@@ -520,6 +614,8 @@ class DriverPage extends StatelessWidget {
   final String userName;
   final Trip? trip;
   final List<Trip> history;
+  final DriverProfile driver;
+  final VoidCallback onToggleOnline;
   final VoidCallback onAccept;
   final VoidCallback onFinish;
   final VoidCallback onLogout;
@@ -529,6 +625,8 @@ class DriverPage extends StatelessWidget {
     required this.userName,
     required this.trip,
     required this.history,
+    required this.driver,
+    required this.onToggleOnline,
     required this.onAccept,
     required this.onFinish,
     required this.onLogout,
@@ -545,15 +643,26 @@ class DriverPage extends StatelessWidget {
           children: [
             topBar('Panel Conductor', userName, onLogout),
             const SizedBox(height: 14),
+            driverPanelCard(driver, onToggleOnline),
+            const SizedBox(height: 14),
             metricBox('Ganancia acumulada', '₡$totalGanado'),
             metricBox('Viajes completados', '${history.length}'),
             const SizedBox(height: 20),
             if (trip == null)
-              const Center(child: Padding(padding: EdgeInsets.all(30), child: Text('No hay solicitudes activas')))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(30),
+                  child: Text('No hay solicitudes activas'),
+                ),
+              )
             else ...[
               TripCard(trip: trip!),
               const SizedBox(height: 14),
-              button('Aceptar viaje', const Color(0xFF00C853), onAccept),
+              button(
+                driver.online ? 'Aceptar viaje' : 'Activa disponible para aceptar',
+                driver.online ? const Color(0xFF00C853) : Colors.grey,
+                driver.online ? onAccept : null,
+              ),
               const SizedBox(height: 12),
               button('Finalizar viaje', Colors.black, onFinish),
             ],
@@ -565,7 +674,7 @@ class DriverPage extends StatelessWidget {
     );
   }
 
-  Widget button(String text, Color color, VoidCallback onTap) {
+  Widget button(String text, Color color, VoidCallback? onTap) {
     return SizedBox(
       width: double.infinity,
       height: 58,
@@ -582,9 +691,17 @@ class AdminPage extends StatelessWidget {
   final String userName;
   final Trip? trip;
   final List<Trip> history;
+  final DriverProfile driver;
   final VoidCallback onLogout;
 
-  const AdminPage({super.key, required this.userName, required this.trip, required this.history, required this.onLogout});
+  const AdminPage({
+    super.key,
+    required this.userName,
+    required this.trip,
+    required this.history,
+    required this.driver,
+    required this.onLogout,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -599,6 +716,9 @@ class AdminPage extends StatelessWidget {
           children: [
             topBar('Panel Admin', userName, onLogout),
             const SizedBox(height: 14),
+            driverStatusCard(driver),
+            const SizedBox(height: 14),
+            metricBox('Conductores online', driver.online ? '1' : '0'),
             metricBox('Viajes activos', trip == null ? '0' : '1'),
             metricBox('Viajes completados', '${history.length}'),
             metricBox('Ventas totales', '₡$totalVentas'),
@@ -628,6 +748,57 @@ Widget topBar(String title, String subtitle, VoidCallback onLogout) {
           ]),
         ),
         IconButton(onPressed: onLogout, icon: const Icon(Icons.logout, color: Colors.white)),
+      ],
+    ),
+  );
+}
+
+Widget driverStatusCard(DriverProfile driver) {
+  return Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+    child: Row(
+      children: [
+        CircleAvatar(
+          backgroundColor: driver.online ? const Color(0xFF00C853) : Colors.grey,
+          child: const Icon(Icons.person, color: Colors.white),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(driver.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+            Text('${driver.vehicle} · Placa ${driver.plate}', style: const TextStyle(color: Colors.black54)),
+          ]),
+        ),
+        Text(
+          driver.online ? 'ONLINE' : 'OFFLINE',
+          style: TextStyle(
+            color: driver.online ? const Color(0xFF00C853) : Colors.grey,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+Widget driverPanelCard(DriverProfile driver, VoidCallback onToggle) {
+  return Container(
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Estado del conductor', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+            Text(driver.online ? 'Disponible para recibir viajes' : 'No disponible'),
+          ]),
+        ),
+        Switch(
+          value: driver.online,
+          activeColor: const Color(0xFF00C853),
+          onChanged: (_) => onToggle(),
+        ),
       ],
     ),
   );
@@ -683,6 +854,12 @@ class TripCard extends StatelessWidget {
         children: [
           Text('${service.emoji} ${service.name}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
           Text('Estado: ${trip.status}', style: const TextStyle(color: Color(0xFF00C853), fontWeight: FontWeight.bold)),
+          if (trip.driver != null) ...[
+            const SizedBox(height: 8),
+            Text('Conductor: ${trip.driver!.name}'),
+            Text('Vehículo: ${trip.driver!.vehicle}'),
+            Text('Placa: ${trip.driver!.plate}'),
+          ],
           const SizedBox(height: 10),
           Text('Salida: ${trip.pickup}'),
           Text('Destino: ${trip.destination}'),
